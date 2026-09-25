@@ -8,6 +8,10 @@
 
 *.pdf binary
 
+# Unified diffs mirror the indented source they capture; git's whitespace
+# check would flag context and added lines as errors in the patch files.
+patches/**/*.patch -whitespace
+
 # Pairing records are generated from the three confirmed owner-blob pairs.
 # The worktree-local installer registers the fail-closed driver command.
 *.i18n.yaml merge=dsh-translation-pairing

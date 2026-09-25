@@ -1,0 +1,13 @@
+diff --git a/lib/context-gc.js b/lib/context-gc.js
+index ea3f4aa..57eddff 100644
+--- a/lib/context-gc.js
++++ b/lib/context-gc.js
+@@ -805,7 +805,7 @@ export async function loadContextGcEngine(ctx, config = {}, deps = {}) {
+           ...slice,
+           dshLlm.createUserMessage({
+             content: [{ type: "text", text: instruction }],
+-            source: { kind: "plugin", plugin: "dsh-engram" },
++            source: { kind: "plugin:dsh-engram" },
+           }),
+         ];
+         const assembler = new dshLlm.BlockAssembler();

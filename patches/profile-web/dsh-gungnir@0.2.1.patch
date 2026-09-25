@@ -1,0 +1,35 @@
+diff --git a/dist/index.js b/dist/index.js
+index fcba4ee..51792e9 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -131,7 +131,7 @@ function makePluginMessage(text) {
+         id: `gungnir-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+         role: 'user',
+         content: [{ type: 'text', text }],
+-        source: { kind: 'plugin', plugin: 'gungnir', form: 'instructions' },
++        source: { kind: 'plugin:gungnir', form: 'instructions' },
+     };
+ }
+ /** 调用 ctx.shell harness 执行器（pwsh-sandbox）跑命令，绝不私开进程。
+diff --git a/dist/surfaces.js b/dist/surfaces.js
+index 5ce091e..f7d33f3 100644
+--- a/dist/surfaces.js
++++ b/dist/surfaces.js
+@@ -69,6 +69,7 @@ export function registerCommands(commands, deps) {
+                     };
+                 }
+                 await invocation.agent.followup({
++                    id: `gungnir-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+                     role: 'user',
+                     content: [
+                         {
+@@ -79,8 +80,8 @@ export function registerCommands(commands, deps) {
+                                 'Then call the gungnir_submit_spec tool with the complete spec object. Wait for human confirmation through that tool.',
+                             ].join('\n'),
+                         },
+-                        { kind: 'plugin', plugin: 'gungnir', form: 'instructions' },
+                     ],
++                    source: { kind: 'plugin:gungnir', form: 'instructions' },
+                 });
+                 return { kind: 'success', text: 'Gungnir: drafting spec — the model will call gungnir_submit_spec for your one-shot confirmation.' };
+             }

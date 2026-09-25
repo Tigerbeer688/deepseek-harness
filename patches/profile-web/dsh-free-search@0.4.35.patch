@@ -1,0 +1,10 @@
+diff --git a/lib/index.js b/lib/index.js
+index fe7a5c5..1a2364e 100644
+--- a/lib/index.js
++++ b/lib/index.js
+@@ -1,4 +1,4 @@
+-import { SettingsConflictError, SettingsProvider } from "@deepseek-ai/dsh-settings";
++import { SettingsConflictError } from "@deepseek-ai/dsh-settings";
+ import { defineTool } from "@deepseek-ai/dsh-tools";
+ import z from "@deepseek-ai/schemastery";
+ import fs from "node:fs";

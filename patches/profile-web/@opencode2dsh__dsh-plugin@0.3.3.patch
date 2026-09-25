@@ -1,0 +1,95 @@
+diff --git a/lib/index.js b/lib/index.js
+index cc0f6a0..df701ea 100644
+--- a/lib/index.js
++++ b/lib/index.js
+@@ -211,8 +211,8 @@ async function* toStreamChunks(events, contextWindow) {
+ * prepareCall/stream) — structural, no host import.
+ */
+ const PROVIDER_ID = "opencode2dsh";
+-const DEFAULT_CONTEXT_WINDOW = 262144;
+-const DEFAULT_MAX_TOKENS = 32768;
++const DEFAULT_CONTEXT_WINDOW = 1048576;
++const DEFAULT_MAX_TOKENS = 65536;
+ /**
+ * Reasoning-effort vocabulary the adapter owns end to end (dsh-llm treats the
+ * ids as opaque: whatever resolveModel advertises comes back on
+@@ -322,7 +322,8 @@ function toPiModel(id, reasoning) {
+ 			cacheWrite: 0
+ 		},
+ 		contextWindow: DEFAULT_CONTEXT_WINDOW,
+-		maxTokens: DEFAULT_MAX_TOKENS
++		maxTokens: DEFAULT_MAX_TOKENS,
++		compat: { maxTokensField: "max_tokens" }
+ 	};
+ }
+ var ZenAdapter = class {
+diff --git a/lib/catalog-4gwZT9We.js b/lib/catalog-4gwZT9We.js
+index facd12b..1ae8ef7 100644
+--- a/lib/catalog-4gwZT9We.js
++++ b/lib/catalog-4gwZT9We.js
+@@ -316,9 +316,21 @@ var ModelCatalog = class {
+ 	}
+ 	async refreshMetadata() {
+ 		try {
+-			const response = await withTimeout(this.#fetch(this.#metadataUrl, { headers: { accept: "application/json" } }));
+-			if (!response.ok) throw new Error(`models.dev returned HTTP ${response.status}`);
+-			const prices = decodeModelsDev(await response.json());
++			const prices = await (async () => {
++				const https = await import("node:https");
++				const data = await new Promise((resolve, reject) => {
++					const req = https.request(this.#metadataUrl, { method: "GET", headers: { accept: "application/json", "accept-encoding": "identity" }, timeout: 30000 }, (res) => {
++						if (res.statusCode !== 200) { res.resume(); reject(new Error(`models.dev returned HTTP ${res.statusCode}`)); return; }
++						const chunks = [];
++						res.on("data", (c) => chunks.push(c));
++						res.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
++					});
++					req.on("error", reject);
++					req.on("timeout", () => req.destroy(new Error("timeout")));
++					req.end();
++				});
++				return decodeModelsDev(JSON.parse(data));
++			})();
+ 			if (prices.size === 0) throw new Error("models.dev contains no OpenCode model metadata");
+ 			this.#prices = prices;
+ 			this.#pricesReady = true;
+@@ -396,14 +408,32 @@ async function withTimeout(promise, timeoutMs = FETCH_TIMEOUT_MS) {
+ }
+ /** S1: fetchModels (models.go:587-618) with the CLI disguise headers. */
+ async function fetchZenModels(zenBaseUrl, fetchImpl, userAgent) {
+-	const response = await withTimeout(fetchImpl(`${zenBaseUrl.replace(/\/+$/, "")}/v1/models`, { headers: {
+-		authorization: "Bearer public",
+-		"user-agent": userAgent,
+-		"x-opencode-client": "cli",
+-		accept: "application/json"
+-	} }));
+-	if (!response.ok) throw new Error(`models endpoint returned HTTP ${response.status}`);
+-	const payload = await response.json();
++	const https = await import("node:https");
++	const url = `${zenBaseUrl.replace(/\/+$/, "")}/v1/models`;
++	const payload = await new Promise((resolve, reject) => {
++		const req = https.request(url, {
++			method: "GET",
++			headers: {
++				authorization: "Bearer public",
++				"user-agent": userAgent,
++				"x-opencode-client": "cli",
++				accept: "application/json",
++				"accept-encoding": "identity"
++			},
++			timeout: 30000
++		}, (res) => {
++			if (res.statusCode !== 200) { res.resume(); reject(new Error(`models endpoint returned HTTP ${res.statusCode}`)); return; }
++			const chunks = [];
++			res.on("data", (c) => chunks.push(c));
++			res.on("end", () => {
++				try { resolve(JSON.parse(Buffer.concat(chunks).toString("utf8"))); }
++				catch (e) { reject(e); }
++			});
++		});
++		req.on("error", reject);
++		req.on("timeout", () => { req.destroy(new Error("timeout")); });
++		req.end();
++	});
+ 	const models = [];
+ 	for (const item of payload.data ?? []) if (typeof item?.id === "string" && item.id.length > 0) models.push(item.id);
+ 	if (models.length === 0) throw new Error("models endpoint returned an empty list");

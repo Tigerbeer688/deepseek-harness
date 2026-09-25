@@ -1,0 +1,18 @@
+diff --git a/dist/api/openai-completions.js b/dist/api/openai-completions.js
+index ed81baa..edcb511 100644
+--- a/dist/api/openai-completions.js
++++ b/dist/api/openai-completions.js
+@@ -502,11 +502,13 @@ function createClient(model, context, apiKey, optionsHeaders, sessionId, compat
+     if (optionsHeaders) {
+         Object.assign(headers, optionsHeaders);
+     }
++    const undiciFetch = globalThis.__dshUndiciFetch ?? undefined;
+     return new OpenAI({
+         apiKey,
+         baseURL: model.baseUrl,
+         dangerouslyAllowBrowser: true,
+         defaultHeaders: headers,
++        ...(undiciFetch ? { fetch: undiciFetch } : {}),
+     });
+ }
+ function buildParams(model, context, options, compat = getCompat(model), cacheRetention = resolveCacheRetention(options?.cacheRetention, options?.env), grammarToolInputProperties = createGrammarToolInputProperties(context.tools, compat.supportsOpenAIGrammarTools)) {

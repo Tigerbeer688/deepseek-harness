@@ -1,0 +1,16 @@
+diff --git a/lib/index.js b/lib/index.js
+index 471d452567..7d0e6837fb 100644
+--- a/lib/index.js
++++ b/lib/index.js
+@@ -195,9 +195,10 @@ export function apply(ctx, config) {
+         ledger.prune();
+         log.info(`agent "${agent.id}" turn ${turn}: review failed with ${verdict.issues.length} issue(s); steering fix request (round ${nextRound}/${config.maxRounds})`);
+         agent.steer({
++            id: `quality-review-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+             role: 'user',
+             content: [{ type: 'text', text: renderFixRequest(verdict, nextRound, config.maxRounds) }],
+-            source: { kind: 'plugin', plugin: 'quality-review', form: 'notice', summary: '质量审核追问' },
++            source: { kind: 'plugin:quality-review', form: 'notice', summary: '质量审核追问' },
+         });
+     });
+     log.info('quality-review ready: auditing assistant turns on turn-stopping');

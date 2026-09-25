@@ -1,0 +1,14 @@
+diff --git a/index.mjs b/index.mjs
+index de3e97e..4e16df1 100644
+--- a/index.mjs
++++ b/index.mjs
+@@ -345,8 +345,7 @@ function injectPromptToAllAgents(ctx, config) {
+           text: prompt ? `${T.injectUpdatedHeader}\n${T.injectUpdatedBody}\n\n${prompt}` : snapshotText
+         }],
+         source: {
+-          kind: 'plugin',
+-          plugin: 'dsh-soul',
++          kind: 'plugin:dsh-soul',
+           form: 'snapshot',
+           sections: [{
+             name: 'soul:persona',
