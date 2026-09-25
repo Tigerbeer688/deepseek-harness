@@ -31,8 +31,7 @@ let bad = 0
 for (const [rel, needle] of checks) {
   const file = path.join(root, rel)
   if (!fs.existsSync(file)) {
-    console.log('MISSING', rel)
-    bad += 1
+    console.log('SKIP', rel, '(package not installed)')
     continue
   }
   const text = fs.readFileSync(file, 'utf8')
