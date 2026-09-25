@@ -1,0 +1,14 @@
+{
+  "name": "Local Skill Filesystem",
+  "description": "Provides skill discovery and loading from the local filesystem",
+  "skills": {
+    "discovered": "Skills discovered",
+    "loading": "Loading skill",
+    "loaded": "Skill loaded",
+    "error": "Failed to load skill"
+  },
+  "watch": {
+    "started": "Filesystem watcher started",
+    "stopped": "Filesystem watcher stopped"
+  }
+}
