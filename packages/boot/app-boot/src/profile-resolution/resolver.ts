@@ -652,6 +652,26 @@ function internalModules(): InternalModules {
   }
 }
 
+/**
+ * Copy a rewritten resolver message into a previously read error stack when the
+ * property accepts writes. tsx's loader hooks deliver resolver errors with `stack`
+ * as a non-writable data property; assigning there throws a TypeError that drops
+ * the resolver `code`, so missing-resource checks misread the original failure.
+ * @param error - resolver error whose `message` was rewritten in place
+ * @param originalMessage - message text still embedded in `stack`
+ * @param stack - `error.stack` captured before the message rewrite; `undefined` skips
+ * @returns nothing; a non-writable stack keeps the rewritten `message` unchanged
+ */
+export function rewriteResolverStack(error: Error, originalMessage: string, stack: string | undefined): void {
+  /* v8 ignore next -- Node's resolver errors always carry a stack */
+  if (stack === undefined) return
+  try {
+    error.stack = stack.replace(originalMessage, error.message)
+  } catch (_stackError) {
+    // A non-writable stack leaves the rewritten message on the error itself.
+  }
+}
+
 function throwWithImporter(error: unknown, routedParent: string, parent: string): never {
   const code = (error as NodeJS.ErrnoException).code
   if (error instanceof Error && (code === 'ERR_MODULE_NOT_FOUND' || code === 'ERR_PACKAGE_PATH_NOT_EXPORTED')) {
@@ -661,8 +681,7 @@ function throwWithImporter(error: unknown, routedParent: string, parent: string)
     const message = originalMessage.replaceAll(routedParent, parent).replaceAll(routedPath, parentPath)
     const stack = error.stack
     error.message = message
-    /* v8 ignore next -- Node's resolver errors always carry a stack */
-    if (stack !== undefined) error.stack = stack.replace(originalMessage, message)
+    rewriteResolverStack(error, originalMessage, stack)
   }
   throw error
 }
@@ -683,9 +702,7 @@ function throwWithoutCjsAnchor(error: unknown, anchor: string): never {
       : `\nRequire stack:\n${remaining.map(path => `- ${path}`).join('\n')}`
     error.message = originalMessage.replace(originalBlock, replacement)
     resolved.requireStack = remaining
-    const stack = error.stack
-    /* v8 ignore next -- Node's resolver errors always carry a stack */
-    if (stack !== undefined) error.stack = stack.replace(originalMessage, error.message)
+    rewriteResolverStack(error, originalMessage, error.stack)
   }
   throw error
 }

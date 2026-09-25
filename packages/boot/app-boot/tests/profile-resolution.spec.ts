@@ -19,6 +19,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import {
   installRuntimeInterception,
   registerWorkerResolution,
+  rewriteResolverStack,
   type RuntimeInterception,
 } from '../src/profile-resolution/resolver.ts'
 import {
@@ -223,6 +224,31 @@ function lookupWinner(matrixCase: LookupCase): LookupLayer | 'interception' | 'm
   if (matrixCase.layers.includes('home')) return 'home'
   return 'missing'
 }
+
+describe('rewriteResolverStack', () => {
+  it('copies the rewritten message into a writable stack', () => {
+    const error = new Error("Package subpath './x' is not defined by \"exports\" in parent")
+    const originalMessage = error.message
+    const stack = error.stack
+    error.message = originalMessage.replaceAll('parent', 'original-importer')
+    rewriteResolverStack(error, originalMessage, stack)
+    expect(error.stack).toContain(error.message)
+    expect(error.stack).not.toContain(originalMessage)
+  })
+
+  it('keeps the rewritten message and the resolver code when the stack is not writable', () => {
+    const error = new Error("Package subpath './x' is not defined by \"exports\" in parent") as NodeJS.ErrnoException
+    error.code = 'ERR_PACKAGE_PATH_NOT_EXPORTED'
+    const originalMessage = error.message
+    const stack = error.stack
+    Object.defineProperty(error, 'stack', { value: stack, writable: false, configurable: true })
+    error.message = originalMessage.replaceAll('parent', 'original-importer')
+    expect(() => rewriteResolverStack(error, originalMessage, stack)).not.toThrow()
+    expect(error.code).toBe('ERR_PACKAGE_PATH_NOT_EXPORTED')
+    expect(error.message).toContain('original-importer')
+    expect(error.stack).toBe(stack)
+  })
+})
 
 describe('runtime resolution', { concurrent: false }, () => {
   it('computes an immutable runtime resolution without writing profile packages', async () => {
