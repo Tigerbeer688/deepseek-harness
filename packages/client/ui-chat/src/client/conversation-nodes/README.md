@@ -76,7 +76,7 @@ The Turn control follows all its opening inputs, including human steering and no
 | Human message claimed from `next-step` | Steering message, outside process folding. |
 | Non-human message in the current `next-turn` claim | Independent, initially collapsed Turn-trigger notice. |
 | Non-human message in an idle `next-step` claim | Turn-trigger notice only in Step 1, with a loaded Turn start, a claim after that start, no `next-turn` claim in this Turn, and no human in the same `next-step` batch. |
-| Other non-human input | Ordinary Context, retained in the Node Store but omitted from Chat. Unclaimed, canceled, or requeued messages do not establish a waking claim. |
+| Other non-human input | Ordinary Context, shown in Chat as a Context injection row inside the Turn process group. Unclaimed, canceled, or requeued messages do not establish a waking claim. |
 
 Trigger titles and icons use the recorded `source.kind`: `schedule`, `tool-jobs`, and `cordis-host-runner` identify scheduled work, background work, and plugin updates. Goal, agent, team, subagent, and webhook sources have their own titles; a webhook with `provider: github` uses the GitHub title. Unknown sources use the generic execution-request title. Expanding the notice shows its recorded body; it does not imply successful execution.
 
@@ -180,7 +180,7 @@ A group collects adjacent process content within one Turn. Step-number changes a
 | `turn-process` | Retain the control as an independent root without ending the current group. |
 | Other visible Nodes owned by a Turn, including tools | Append the whole Node to the current group, creating a group if necessary. |
 | Node from another Turn or without a Turn | Break the same-Turn sequence. A Node without a Turn remains independent, including an unsplit Assistant. |
-| Hidden Nodes, system prompts, ordinary Context injection, and `permission` commands | Excluded from the grouping input; they neither join nor split a group. |
+| Hidden Nodes, system prompts, and `permission` commands | Excluded from the grouping input; they neither join nor split a group. |
 
 A reply contains non-blank text, an image, or another visible block; reasoning and tool-call protocol blocks do not count as a reply. An Assistant with neither non-blank reasoning nor reply content contributes no reference. Group creation requires a member, so metadata-only Turns create no empty group.
 

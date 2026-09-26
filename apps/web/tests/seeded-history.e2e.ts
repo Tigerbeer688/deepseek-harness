@@ -414,7 +414,8 @@ describe('web e2e: seeded history renders through cold resume', () => {
     await scaffold.ctx.sessions.flush(agent.session)
     expect(agent.session.snapshotEvents()).toContainEqual(injected)
     await waitForContextInClient(page, injected.seq)
-    expect(await page.locator('[data-chat-flow-kind="context"]').count()).toBe(0)
+    expect(await page.locator('[data-chat-flow-kind="context"]').count()).toBe(1)
+    expect(await page.locator('[data-context-injection-body]').count()).toBe(0)
   }, 60_000)
 
   it.skipIf(MODE === 'record')('matches the historical conversation aria golden', async () => {
@@ -470,7 +471,7 @@ describe('web e2e: seeded history renders through cold resume', () => {
     }
   })
 
-  it.skipIf(MODE === 'record')('omits ordinary instructions from Chat while retaining their logged content', async () => {
+  it.skipIf(MODE === 'record')('shows ordinary instructions in Chat while retaining their logged content', async () => {
     const session = scaffold.ctx.sessions.get(SessionId(SEED_ID))
     if (session === undefined) throw new Error('seeded session is unavailable')
     const instructions = session.snapshotEvents().filter(event => event.type === 'user/message'
@@ -478,7 +479,8 @@ describe('web e2e: seeded history renders through cold resume', () => {
     expect(instructions).toHaveLength(1)
     expect(instructions[0]?.data).toMatchObject({ source: { form: 'instructions', changes: [{ path: 'AGENTS.md' }] } })
     expect(JSON.stringify(instructions[0]?.data)).toContain('Instruction 24: preserve the logged context contract.')
-    expect(await page.locator('[data-chat-flow-kind="context"], [data-context-injection-body]').count()).toBe(0)
+    expect(await page.locator('[data-chat-flow-kind="context"]').count()).toBe(1)
+    expect(await page.locator('[data-context-injection-body]').count()).toBe(0)
   })
 
   it.skipIf(MODE === 'record')('restores the active turn rail mark across Chat and Trajectory', async () => {
@@ -788,7 +790,7 @@ describe('web e2e: seeded history renders through cold resume', () => {
     }
   }, 60_000)
 
-  it.skipIf(MODE === 'record')('keeps short injected context out of Chat without dropping the event', async () => {
+  it.skipIf(MODE === 'record')('shows short injected context as a collapsed Chat row without dropping the event', async () => {
     const agent = scaffold.ctx.agents.get(SessionId(SEED_ID))
     if (agent === undefined) throw new Error('seeded session did not attach an agent')
     const injected = agent.session.append('user/message', createUserMessage({
@@ -799,7 +801,7 @@ describe('web e2e: seeded history renders through cold resume', () => {
     await scaffold.ctx.sessions.flush(agent.session)
     expect(agent.session.snapshotEvents()).toContainEqual(injected)
     await waitForContextInClient(page, injected.seq)
-    expect(await page.locator('[data-chat-flow-kind="context"]').count()).toBe(0)
+    expect(await page.locator('[data-chat-flow-kind="context"]').count()).toBe(1)
     expect(await page.getByText('Short injected context.', { exact: true }).count()).toBe(0)
   })
 

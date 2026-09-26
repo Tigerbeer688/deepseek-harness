@@ -390,7 +390,7 @@ describe.skipIf(MODE === 'record')('web e2e: file and session references through
     expect(tripwire.warnings).toEqual([])
   })
 
-  it('renders the direct message while retaining the following recall only in the log', async () => {
+  it('renders the direct message and retains the recall as a collapsed Chat row', async () => {
     onTestFailed(() => saveFailureShot(page, 'web-e2e-reference-order'))
     const group = page.getByRole('treeitem', { name: /Ungrouped/ })
     await group.waitFor({ timeout: 15_000 })
@@ -409,7 +409,7 @@ describe.skipIf(MODE === 'record')('web e2e: file and session references through
     expect(inputs.map(event => event.data.source.kind)).toEqual(['user', 'session-reference'])
     expect(inputs[0]?.seq).toBeLessThan(inputs[1]!.seq)
     expect(JSON.stringify(inputs[1]?.data)).toContain('<referenced-sessions>snapshot</referenced-sessions>')
-    expect(await page.locator('[data-chat-flow-kind="context"]').count()).toBe(0)
+    expect(await page.locator('[data-chat-flow-kind="context"]').count()).toBe(1)
 
     const snapshot = (await captureStableAria(page, '[class*="centerCol"]', scaffold.workspaceCwd))
       .split(TARGET_SESSION_ID).join('{{targetId}}')
