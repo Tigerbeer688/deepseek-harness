@@ -15,7 +15,7 @@
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
   "bin": "bin.js",
-  "exports": {
+  "exports": { "./locale/*": "./locale/*",
     ".": {
       "types": "./lib/types/index.d.ts",
       "default": "./lib/index.js"

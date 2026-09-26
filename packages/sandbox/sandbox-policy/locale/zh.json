@@ -1,0 +1,1 @@
+{"name":"@deepseek-ai/dsh-sandbox-policy","description":"Per-call sandbox policy resolver and current model context: deployment fallbacks plus each session\u0027s mode and workspace root, shared by every enforcing capability family"}
