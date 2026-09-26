@@ -24,8 +24,8 @@ node patches/profile-web/verify-source-kinds.mjs [profileRoot]
 | `dsh-loop-continue@0.2.0.patch` | `lib/index.js`：`source.kind` 改为 `plugin:${name}` 模板。 |
 | `dsh-answer-reviewer@0.7.2.patch` | `lib/review.js`：`source.kind` 改为 `plugin:${PLUGIN_NAME}` 模板。已从 profile 卸载；补丁仅作归档，重新安装该包后手动应用。 |
 | `dsh-quality-review@0.1.0.patch` | `lib/index.js`：`source.kind` 改为 `'plugin:quality-review'`，steer 消息增加 `id`。依赖为 `github:CAI-MH/dsh-quality-review` @ `7c5a67d`。已从 profile 卸载；补丁仅作归档，重新安装该包后手动应用。 |
-| `dsh-soul@0.5.0.patch` | `index.mjs`：`source.kind` 改为 `'plugin:dsh-soul'`。 |
-| `dsh-engram@0.4.0.patch` | `lib/context-gc.js`：`source.kind` 改为 `'plugin:dsh-engram'`。已从 profile 卸载；补丁仅作归档，重新安装该包后手动应用。 |
+| `dsh-soul@0.5.0.patch` | `index.mjs`：`source.kind` 改为 `'plugin:dsh-soul'`。已从 profile 卸载；补丁仅作归档，重新安装该包后手动应用。 |
+| `dsh-engram@0.4.0.patch` | `lib/context-gc.js`：`source.kind` 改为 `'plugin:dsh-engram'`。 |
 
 ## shims/
 
