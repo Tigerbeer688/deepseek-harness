@@ -19,7 +19,7 @@ node patches/profile-web/verify-source-kinds.mjs [profileRoot]
 
 | Patch | Effect |
 | --- | --- |
-| `@opencode2dsh__dsh-plugin@0.3.3.patch` | `lib/index.js`: `DEFAULT_CONTEXT_WINDOW` 262144→1048576, `DEFAULT_MAX_TOKENS` 32768→65536, `toPiModel` adds `compat.maxTokensField: "max_tokens"` (fixes mimo free-model output token truncation). `lib/catalog-4gwZT9We.js`: the models.dev and Zen model lists switch to `node:https` (the built-in fetch returns empty response headers in this environment). |
+| `@opencode2dsh__dsh-plugin@0.3.3.patch` | `lib/index.js`: `DEFAULT_CONTEXT_WINDOW` 262144→1048576, `DEFAULT_MAX_TOKENS` 32768→65536, `toPiModel` adds `compat.maxTokensField: "max_tokens"` (fixes mimo free-model output token truncation). `ZenAdapter` gains `imageRequestPricing()` returning `undefined` (the `dsh-llm` default), fixing the `imageRequestPricing is not a function` crash in `tokenMeter.measure` when a session's active route uses the opencode2dsh adapter. `lib/catalog-4gwZT9We.js`: the models.dev and Zen model lists switch to `node:https` (the built-in fetch returns empty response headers in this environment). |
 | `@earendil-works__pi-ai@0.82.1.patch` | `dist/api/openai-completions.js`: injects `globalThis.__dshUndiciFetch` into the OpenAI client (Node 22.18's built-in undici returns empty response headers or a binary body for external HTTPS). |
 | `dsh-free-search@0.4.35.patch` | `lib/index.js`: removes the `SettingsProvider` import (the service was removed from the Client face in 0.1.7, and the import caused load failure). |
 | `dsh-gungnir@0.2.1.patch` | `dist/index.js` and `dist/surfaces.js`: change steering/followup `source.kind` from `'plugin'` to `'plugin:gungnir'`. |

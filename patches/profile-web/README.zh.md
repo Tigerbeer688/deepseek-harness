@@ -19,7 +19,7 @@ node patches/profile-web/verify-source-kinds.mjs [profileRoot]
 
 | 补丁 | 作用 |
 | --- | --- |
-| `@opencode2dsh__dsh-plugin@0.3.3.patch` | `lib/index.js`：`DEFAULT_CONTEXT_WINDOW` 262144→1048576、`DEFAULT_MAX_TOKENS` 32768→65536、`toPiModel` 增加 `compat.maxTokensField: "max_tokens"`（修复 mimo 免费模型输出 token 截断）。`lib/catalog-4gwZT9We.js`：models.dev 与 Zen 模型列表改走 `node:https`（内置 fetch 在本环境返回空响应头）。 |
+| `@opencode2dsh__dsh-plugin@0.3.3.patch` | `lib/index.js`：`DEFAULT_CONTEXT_WINDOW` 262144→1048576、`DEFAULT_MAX_TOKENS` 32768→65536、`toPiModel` 增加 `compat.maxTokensField: "max_tokens"`（修复 mimo 免费模型输出 token 截断）。`ZenAdapter` 增加返回 `undefined`（`dsh-llm` 默认值）的 `imageRequestPricing()`，修复会话活跃路由走 opencode2dsh 适配器时 `tokenMeter.measure` 抛出的 `imageRequestPricing is not a function` 崩溃。`lib/catalog-4gwZT9We.js`：models.dev 与 Zen 模型列表改走 `node:https`（内置 fetch 在本环境返回空响应头）。 |
 | `@earendil-works__pi-ai@0.82.1.patch` | `dist/api/openai-completions.js`：OpenAI 客户端注入 `globalThis.__dshUndiciFetch`（Node 22.18 内置 undici 对外部 HTTPS 返回空响应头/二进制体）。 |
 | `dsh-free-search@0.4.35.patch` | `lib/index.js`：移除对 `SettingsProvider` 的导入（0.1.7 该服务已从 Client 面移除，导入导致加载失败）。 |
 | `dsh-gungnir@0.2.1.patch` | `dist/index.js`、`dist/surfaces.js`：steering/followup 的 `source.kind` 由 `'plugin'` 改为 `'plugin:gungnir'`。 |

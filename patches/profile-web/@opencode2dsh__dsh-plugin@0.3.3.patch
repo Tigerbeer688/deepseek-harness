@@ -1,5 +1,5 @@
 diff --git a/lib/index.js b/lib/index.js
-index cc0f6a0..df701ea 100644
+index cc0f6a0..2e4a390 100644
 --- a/lib/index.js
 +++ b/lib/index.js
 @@ -211,8 +211,8 @@ async function* toStreamChunks(events, contextWindow) {
@@ -23,6 +23,14 @@ index cc0f6a0..df701ea 100644
  	};
  }
  var ZenAdapter = class {
+@@ -361,6 +362,7 @@ var ZenAdapter = class {
+ 	* undefined = the host default retry policy, matching sidecar behavior.
+ 	*/
+ 	providerRetryPolicy(_provider) {}
++	imageRequestPricing() {}
+ 	/** Advisory catalog for the DSH model picker (deduped; dsh-llm rejects duplicates). */
+ 	listModels(provider) {
+ 		const seen = /* @__PURE__ */ new Set();
 diff --git a/lib/catalog-4gwZT9We.js b/lib/catalog-4gwZT9We.js
 index facd12b..1ae8ef7 100644
 --- a/lib/catalog-4gwZT9We.js
