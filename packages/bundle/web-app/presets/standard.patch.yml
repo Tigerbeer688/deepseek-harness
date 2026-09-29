@@ -67,11 +67,8 @@
               compaction: true
               toolResultPruner: true
             config:
-              - id: engram-compaction
-                name: dsh-engram/compaction
-                config:
-                  gcReplacesCompaction: true
-                  gcNarrative: true
+              - id: compaction-basic
+                name: '@deepseek-ai/dsh-compaction-basic'
               - id: command-compact
                 name: '@deepseek-ai/dsh-command-compact'
               - id: tool-result-pruner
