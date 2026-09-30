@@ -225,7 +225,7 @@ function toolResult(callId: string, text: string, isError = false) {
 }
 
 describe('built-in conversation node Definitions', () => {
-  it.each(['replay', 'live', 'prepend'] as const)('keeps developer tool changes visible while hiding ordinary Context (%s)', (mode) => {
+  it.each(['replay', 'live', 'prepend'] as const)('keeps developer tool changes visible alongside ordinary Context (%s)', (mode) => {
     const entries = [
       at(0, 'request/header', { reason: 'initial', header: {
         config: { provider: 'test', model: 'test' },
@@ -254,8 +254,11 @@ describe('built-in conversation node Definitions', () => {
     }
     const current = snapshot(value)
     const visible = current.order.map(key => current.nodes.get(key))
-    expect(visible.map(candidate => candidate?.kind)).toEqual(['context'])
+    expect(visible.map(candidate => candidate?.kind)).toEqual(['context', 'context'])
     expect(visible[0]?.data).toMatchObject({
+      kind: 'context', content: [{ type: 'text', text: 'workspace context' }],
+    })
+    expect(visible[1]?.data).toMatchObject({
       kind: 'context', content: [{ type: 'tool-addition', toolName: 'search' }, { type: 'tool-removal', toolName: 'old_search' }],
     })
     expect(current.nodes.values().filter(candidate => candidate.kind === 'context')).toHaveLength(2)
