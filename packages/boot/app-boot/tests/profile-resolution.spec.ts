@@ -28,6 +28,7 @@ import {
   type Profile,
   type RuntimeResolution,
 } from '../src/profile.ts'
+import { registerHooksThreadStacks } from './hooks-thread-stack.ts'
 
 const roots: string[] = []
 const registrations: RuntimeInterception[] = []
@@ -157,7 +158,7 @@ function fixture(name = '@deepseek-ai/dsh-core'): {
     root,
     installAnchor,
     installed,
-    profile: {
+    profile: { skippedBundles: [],
       name: 'web',
       dir: profileDir,
       layers: [],
@@ -236,7 +237,7 @@ describe('rewriteResolverStack', () => {
     expect(error.stack).not.toContain(originalMessage)
   })
 
-  it('keeps the rewritten message and the resolver code when the stack is not writable', () => {
+  it('redefines a read-only stack with the rewritten message and keeps the resolver code', () => {
     const error = new Error("Package subpath './x' is not defined by \"exports\" in parent") as NodeJS.ErrnoException
     error.code = 'ERR_PACKAGE_PATH_NOT_EXPORTED'
     const originalMessage = error.message
@@ -246,7 +247,8 @@ describe('rewriteResolverStack', () => {
     expect(() => rewriteResolverStack(error, originalMessage, stack)).not.toThrow()
     expect(error.code).toBe('ERR_PACKAGE_PATH_NOT_EXPORTED')
     expect(error.message).toContain('original-importer')
-    expect(error.stack).toBe(stack)
+    expect(error.stack).toContain(error.message)
+    expect(error.stack).not.toContain(originalMessage)
   })
 })
 
@@ -1506,6 +1508,29 @@ describe('runtime resolution', { concurrent: false }, () => {
     expect(thrownMessage(() => resolveFrom('unavailable-lib', parent))).toBe(nativeMessage)
     expect(thrownMessage(() => resolveFrom('@deepseek-ai/dsh-core/private', parent)))
       .toContain(` imported from ${fileURLToPath(parent)}`)
+  })
+
+  it('reports routed ESM failures from the original importer when Node returns a read-only stack', async () => {
+    const f = fixture()
+    const parent = pathToFileURL(join(f.profile.dir, 'entry.mjs')).href
+    const nativeMessage = thrownMessage(() => resolveFrom('unavailable-lib', parent))
+    const registration = installRuntimeInterception(await resolutionOf(f))
+    registrations.push(registration)
+    const hooks = registerHooksThreadStacks()
+    try {
+      const missing = thrownError(() => resolveFrom('unavailable-lib', parent))
+      expect(missing).toMatchObject({ code: 'ERR_MODULE_NOT_FOUND', message: nativeMessage })
+      expect(missing.stack).toContain(nativeMessage)
+      const unexported = thrownError(() => resolveFrom('@deepseek-ai/dsh-core/private', parent))
+      expect(unexported.code).toBe('ERR_PACKAGE_PATH_NOT_EXPORTED')
+      expect(unexported.message).toContain(` imported from ${fileURLToPath(parent)}`)
+      expect(unexported.stack).toContain(unexported.message)
+      const imported = importFrom('@deepseek-ai/dsh-core/private', parent)
+      await expect(imported).rejects.toMatchObject({ code: 'ERR_PACKAGE_PATH_NOT_EXPORTED' })
+      await expect(imported).rejects.toThrow(` imported from ${fileURLToPath(parent)}`)
+    } finally {
+      hooks.deregister()
+    }
   })
 
   it('leaves an invalid resolution manifest error to Node', async () => {

@@ -1,1 +1,6 @@
-{"name":"@deepseek-ai/dsh-experimental-computer-use-cua-driver-native","description":"Experimental computer-use provider embedding the Cua Driver native npm SDK"}
+{
+  "meta": {
+    "title": "Computer Use (Cua Driver)",
+    "description": "Let the model operate the desktop with the bundled Cua Driver runtime; needs desktop permissions for the app that launches dsh."
+  }
+}

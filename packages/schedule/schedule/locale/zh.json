@@ -1,1 +1,6 @@
-{"name":"@deepseek-ai/dsh-schedule","description":"Agent-scoped durable after, at, and fixed-rate reminders over the session event log"}
+{
+  "meta": {
+    "title": "任务调度",
+    "description": "保存自动化任务，到点后在原会话中执行，并为智能体提供管理任务的工具。"
+  }
+}

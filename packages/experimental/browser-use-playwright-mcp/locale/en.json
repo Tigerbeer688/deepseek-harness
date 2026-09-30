@@ -1,1 +1,6 @@
-{"name":"@deepseek-ai/dsh-experimental-browser-use-playwright-mcp","description":"Experimental per-Session Chromium browser tools through @playwright/mcp"}
+{
+  "meta": {
+    "title": "Browser Use (Playwright)",
+    "description": "Let the model browse and operate web pages through Playwright MCP in a launched Chromium."
+  }
+}

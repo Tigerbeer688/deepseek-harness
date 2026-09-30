@@ -1,1 +1,6 @@
-{"name":"@deepseek-ai/dsh-schedule","description":"Agent-scoped durable after, at, and fixed-rate reminders over the session event log"}
+{
+  "meta": {
+    "title": "Task scheduling",
+    "description": "Stores automation tasks, runs each in its original session when it is due, and gives the agent tools to manage them."
+  }
+}

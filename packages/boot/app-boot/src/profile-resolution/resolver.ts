@@ -653,23 +653,21 @@ function internalModules(): InternalModules {
 }
 
 /**
- * Copy a rewritten resolver message into a previously read error stack when the
- * property accepts writes. tsx's loader hooks deliver resolver errors with `stack`
- * as a non-writable data property; assigning there throws a TypeError that drops
- * the resolver `code`, so missing-resource checks misread the original failure.
- * @param error - resolver error whose `message` was rewritten in place
- * @param originalMessage - message text still embedded in `stack`
- * @param stack - `error.stack` captured before the message rewrite; `undefined` skips
- * @returns nothing; a non-writable stack keeps the rewritten `message` unchanged
+ * Copy a rewritten resolver message into the same text in a previously read error stack.
+ * tsx loader hooks and Node's module-hooks thread deliver resolver errors with `stack`
+ * as a read-only configurable data property, so a rejected stack assignment redefines
+ * the property value instead of throwing; a dropped assignment would keep the original
+ * message only on `stack` while missing-resource checks read the rewritten `message`.
+ * @param error - resolver error whose `message` was rewritten in place.
+ * @param originalMessage - message text still embedded in `stack`.
+ * @param stack - `error.stack` captured before the message rewrite; `undefined` skips.
+ * @returns nothing; the captured stack carries the rewritten message when present.
  */
 export function rewriteResolverStack(error: Error, originalMessage: string, stack: string | undefined): void {
   /* v8 ignore next -- Node's resolver errors always carry a stack */
   if (stack === undefined) return
-  try {
-    error.stack = stack.replace(originalMessage, error.message)
-  } catch (_stackError) {
-    // A non-writable stack leaves the rewritten message on the error itself.
-  }
+  const replaced = stack.replace(originalMessage, error.message)
+  if (!Reflect.set(error, 'stack', replaced)) Object.defineProperty(error, 'stack', { value: replaced })
 }
 
 function throwWithImporter(error: unknown, routedParent: string, parent: string): never {
@@ -678,9 +676,8 @@ function throwWithImporter(error: unknown, routedParent: string, parent: string)
     const routedPath = fileURLToPath(routedParent)
     const parentPath = fileURLToPath(parent)
     const originalMessage = error.message
-    const message = originalMessage.replaceAll(routedParent, parent).replaceAll(routedPath, parentPath)
     const stack = error.stack
-    error.message = message
+    error.message = originalMessage.replaceAll(routedParent, parent).replaceAll(routedPath, parentPath)
     rewriteResolverStack(error, originalMessage, stack)
   }
   throw error

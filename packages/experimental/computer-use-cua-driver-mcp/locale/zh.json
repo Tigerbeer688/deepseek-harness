@@ -1,1 +1,6 @@
-{"name":"@deepseek-ai/dsh-experimental-computer-use-cua-driver-mcp","description":"Experimental computer use through an installed Cua Driver MCP executable"}
+{
+  "meta": {
+    "title": "电脑操作（Cua Driver MCP）",
+    "description": "让模型通过单独安装的 cua-driver 可执行文件操作桌面。"
+  }
+}

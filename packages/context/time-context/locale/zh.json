@@ -1,1 +1,6 @@
-{"name":"@deepseek-ai/dsh-time-context","description":"Opt-in durable per-step context with the current time and elapsed time"}
+{
+  "meta": {
+    "title": "时间感知",
+    "description": "每一步把当前时间、浏览器时区和距上一条消息的时长告诉模型。"
+  }
+}
