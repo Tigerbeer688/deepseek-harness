@@ -118,7 +118,8 @@ Before pushing, follow [dsh-pre-push-checks](.agents/skills/dsh-pre-push-checks/
 - Match evidence to the surface: focused behavior tests, model/user-output snapshots, `doc-sync` for docs, built smokes for published paths, and real-API e2e for providers.
 - Never default to the full suite or repeat a passing check for commit or push. CI owns exhaustive coverage and the platform matrix; rehearse all locally only by explicit request, for CI diagnosis, or for an irreducibly repository-wide change.
 - `test:coverage`, not `test`, is the CI coverage gate ([why](docs/testing.md)).
-- **Web browser automation and GIF recording:** launch with `pnpm dsh web --patch apps/web/tests/pin-browse-picker.overlay.yml` to use the [in-page directory picker](apps/web/tests/pin-browse-picker.overlay.yml); omit this override only when testing native picker behavior explicitly.
+- **Web browser automation and GIF recording:** launch recipe in [record-browser-gif](.agents/skills/record-browser-gif/SKILL.md).
+- **Profile installs restore patched files:** after any `pnpm install` inside `~/.dsh/profiles/*`, rerun `node patches/profile-web/apply.mjs` then `node patches/profile-web/verify-source-kinds.mjs` ([usage](patches/profile-web/README.md)).
 
 ## Secrets / .env
 
