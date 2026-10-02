@@ -1,7 +1,25 @@
 diff --git a/lib/index.js b/lib/index.js
-index cc0f6a0..2e4a390 100644
+index cc0f6a0..5f8c400 100644
 --- a/lib/index.js
 +++ b/lib/index.js
+@@ -1,7 +1,7 @@
+ import { a as defaultCachePath, d as disguiseHeaders, n as ZEN_BASE_URL, t as ModelCatalog, u as deriveRequestIDs } from "./catalog-4gwZT9We.js";
+ import { i as toPiContext, n as ensureFreeLaneShape } from "./messages-PSa7_wRp.js";
+ import { n as routingContext } from "./dispatcher-C9pQXvDo.js";
+-import { a as shouldRotate, r as isRegionBlocked, t as classifyStreamFailure } from "./rotate-o6Ljmrzr.js";
++import { a as shouldRotate, i as setRotateDelegate, r as isRegionBlocked, t as classifyStreamFailure } from "./rotate-o6Ljmrzr.js";
+ import { homedir } from "node:os";
+ import { dirname, join } from "node:path";
+ import { existsSync } from "node:fs";
+@@ -9,7 +9,7 @@ import { chmod, mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/pro
+ import { randomBytes } from "node:crypto";
+ import { createProvider } from "@earendil-works/pi-ai";
+ import * as openaiCompletions from "@earendil-works/pi-ai/api/openai-completions";
+-import { spawn } from "node:child_process";
++import { execFile, spawn } from "node:child_process";
+ import { createInterface } from "node:readline";
+ import { EventEmitter } from "node:events";
+ import { platform } from "node:process";
 @@ -211,8 +211,8 @@ async function* toStreamChunks(events, contextWindow) {
  * prepareCall/stream) — structural, no host import.
  */
@@ -31,6 +49,185 @@ index cc0f6a0..2e4a390 100644
  	/** Advisory catalog for the DSH model picker (deduped; dsh-llm rejects duplicates). */
  	listModels(provider) {
  		const seen = /* @__PURE__ */ new Set();
+@@ -522,6 +524,7 @@ var ZenAdapter = class {
+ 				})(), model.contextWindow);
+ 				return;
+ 			}
++			await settleRouteSwitch();
+ 		}
+ 	}
+ 	#eventsFor(options, context, ids, model) {
+@@ -3844,6 +3847,146 @@ function applyIpPoolSettings(ctx, config, logger, deps = {}) {
+ 	return controller;
+ }
+ 
++//#endregion
++//#region src/pool/route-switch.ts
++let routeSwitchPending = null;
++/** Fill the top-level `routeSwitch` config block with defaults (schema-independent). */
++function normalizeRouteSwitchConfig(config) {
++	const raw = config?.routeSwitch ?? {};
++	const gateways = Array.isArray(raw.gateways) ? raw.gateways.filter((entry) => typeof entry === "string" && entry.length > 0) : [];
++	const failures = Array.isArray(raw.failures) && raw.failures.length > 0 ? raw.failures.filter((entry) => typeof entry === "string") : ["limited"];
++	return {
++		enabled: raw.enabled === true,
++		subnet: typeof raw.subnet === "string" && raw.subnet.length > 0 ? raw.subnet : "172.0.0.0",
++		mask: typeof raw.mask === "string" && raw.mask.length > 0 ? raw.mask : "255.0.0.0",
++		gateways,
++		metric: Number.isInteger(raw.metric) ? raw.metric : 5,
++		pauseMs: Number.isInteger(raw.pauseMs) && raw.pauseMs >= 0 ? raw.pauseMs : 500,
++		maxAttempts: Number.isInteger(raw.maxAttempts) ? Math.min(Math.max(raw.maxAttempts, 0), 3) : 3,
++		probeGateways: raw.probeGateways !== false,
++		probeTimeoutMs: Number.isInteger(raw.probeTimeoutMs) && raw.probeTimeoutMs >= 0 ? raw.probeTimeoutMs : 300,
++		failures
++	};
++}
++/** First matching row of `route print <subnet>` carries the gateway (the active section prints first). */
++function parseRouteRows(stdout, subnet, mask) {
++	for (const line of stdout.split(/\r?\n/)) {
++		const fields = line.trim().split(/\s+/);
++		if (fields.length >= 3 && fields[0] === subnet && fields[1] === mask) return fields[2];
++	}
++	return null;
++}
++/** Run route.exe and decode the GBK console output as latin1 (ASCII columns stay intact). */
++function runRouteCommand(args, tolerateFailure = false) {
++	return new Promise((resolve, reject) => {
++		execFile("route", args, { encoding: "buffer", windowsHide: true, timeout: 1e4 }, (err, stdout) => {
++			const text = (stdout ?? Buffer.alloc(0)).toString("latin1");
++			if (err && !tolerateFailure) reject(err instanceof Error ? err : new Error(String(err)));
++			else resolve(text);
++		});
++	});
++}
++/** One ICMP echo against the gateway; any probe failure resolves false. */
++function pingGateway(gateway, timeoutMs) {
++	return new Promise((resolve) => {
++		execFile("ping", ["-n", "1", "-w", String(timeoutMs), gateway], { windowsHide: true, timeout: timeoutMs + 1e3 }, (err) => resolve(!err));
++	});
++}
++/** Gateway of the configured subnet, or null when no route row matches. */
++async function currentRouteGateway(cfg, run) {
++	return parseRouteRows(await run(["print", cfg.subnet], true), cfg.subnet, cfg.mask);
++}
++/**
++ * Swap the subnet route to the next reachable gateway (delete + persistent
++ * add), verify the table, then replace the global fetch dispatcher so the
++ * retried stream cannot reuse keep-alive sockets pinned to the old gateway.
++ * Throws on probe exhaustion, command failure, or a failed verification.
++ */
++async function swapRouteOnce(cfg, run, ping) {
++	const current = await currentRouteGateway(cfg, run);
++	const start = current !== null && cfg.gateways.includes(current) ? cfg.gateways.indexOf(current) + 1 : 0;
++	let next = null;
++	for (let i = 0; i < cfg.gateways.length; i += 1) {
++		const candidate = cfg.gateways[(start + i) % cfg.gateways.length];
++		if (!cfg.probeGateways || await ping(candidate, cfg.probeTimeoutMs)) {
++			next = candidate;
++			break;
++		}
++	}
++	if (next === null) throw new Error(`no reachable gateway among ${cfg.gateways.join(", ")}`);
++	await run(["delete", cfg.subnet], true);
++	await run(["-p", "add", cfg.subnet, "mask", cfg.mask, next, "metric", String(cfg.metric)], false);
++	const after = await currentRouteGateway(cfg, run);
++	if (after !== next) throw new Error(`verify failed: route table shows ${after ?? "none"}, expected ${next}`);
++	await resetFetchDispatcher();
++	if (cfg.pauseMs > 0) await new Promise((resolve) => setTimeout(resolve, cfg.pauseMs));
++	return { from: current, to: next };
++}
++/**
++ * Publish a fresh undici dispatcher of the same class on the global symbols.
++ * The previous dispatcher keeps serving in-flight requests and lets its idle
++ * sockets expire; new fetches open connections on the swapped route.
++ * Returns false when the dispatcher registry is unavailable.
++ */
++async function resetFetchDispatcher() {
++	try {
++		const imported = await import("undici");
++		const undici = imported.setGlobalDispatcher !== void 0 ? imported : imported.default;
++		if (typeof undici?.setGlobalDispatcher !== "function" || typeof undici.getGlobalDispatcher !== "function") return false;
++		const current = undici.getGlobalDispatcher();
++		if (current === undefined || typeof current.constructor !== "function") return false;
++		undici.setGlobalDispatcher(new current.constructor());
++		return true;
++	} catch {
++		return false;
++	}
++}
++/** Rotate delegate: flips the egress route for the configured failures; racing streams share one flip. */
++function createRouteSwitchDelegate(cfg, run, ping, logger) {
++	return { decide(failure, _model, _session, attempt, _deterministic) {
++		if (!cfg.failures.includes(failure)) return false;
++		if (attempt > cfg.maxAttempts) return false;
++		if (routeSwitchPending === null) {
++			routeSwitchPending = swapRouteOnce(cfg, run, ping).then((result) => {
++				logger.info(`opencode2dsh: route-switch ${result.from ?? "none"} -> ${result.to} (subnet ${cfg.subnet} mask ${cfg.mask} metric ${cfg.metric})`);
++			}).catch((err) => {
++				logger.warn(`opencode2dsh: route-switch failed: ${err instanceof Error ? err.message : String(err)}`);
++			}).finally(() => {
++				routeSwitchPending = null;
++			});
++		}
++		return true;
++	} };
++}
++/** Install the route-switch rotate delegate; null when disabled, non-Windows, or fewer than 2 gateways. */
++function installRouteSwitch(config, logger, deps = {}) {
++	const cfg = normalizeRouteSwitchConfig(config);
++	if (!cfg.enabled) return null;
++	if (platform !== "win32") {
++		logger.warn("opencode2dsh: route-switch requires Windows; delegate not installed");
++		return null;
++	}
++	if (cfg.gateways.length < 2) {
++		logger.warn("opencode2dsh: route-switch needs at least 2 gateways; delegate not installed");
++		return null;
++	}
++	const run = deps.runRoute ?? runRouteCommand;
++	const ping = deps.ping ?? pingGateway;
++	setRotateDelegate(createRouteSwitchDelegate(cfg, run, ping, logger));
++	currentRouteGateway(cfg, run).then((gateway) => {
++		logger.info(`opencode2dsh: route-switch armed; gateway ${gateway ?? "none"}; rotation ${cfg.gateways.join(" -> ")} on ${cfg.failures.join("/")}; probe ${cfg.probeGateways ? `${cfg.probeTimeoutMs}ms` : "off"}`);
++	}, (err) => {
++		logger.warn(`opencode2dsh: route-switch gateway read failed: ${err instanceof Error ? err.message : String(err)}`);
++	});
++	return { dispose: () => {
++		setRotateDelegate(null);
++	} };
++}
++/** Await the in-flight flip so the retried stream resolves its connection on the new gateway. */
++async function settleRouteSwitch() {
++	while (routeSwitchPending !== null) await routeSwitchPending;
++}
++
+ //#endregion
+ //#region src/provider.ts
+ function providerBaseURL(port) {
+@@ -3980,6 +4123,7 @@ function applyAdapter(ctx, config) {
+ 	});
+ 	const adapter = new ZenAdapter(catalog);
+ 	applyIpPoolSettings(ctx, config, logger, { listLiveModels: () => catalog.list() });
++	const routeSwitch = config.ipPool?.enabled === true ? null : installRouteSwitch(config, logger);
+ 	ctx.llm.registerAdapter([PROVIDER_ID], adapter);
+ 	logger.info(`opencode2dsh: adapter registered for "${PROVIDER_ID}" (catalog warms up in background)`);
+ 	catalog.start().catch((err) => {
+@@ -3992,6 +4136,7 @@ function applyAdapter(ctx, config) {
+ 	});
+ 	const maybeEffect = ctx.effect;
+ 	if (typeof maybeEffect === "function") maybeEffect.call(ctx, () => () => {
++		routeSwitch?.dispose();
+ 		catalog.stop();
+ 	});
+ 	return { ready };
+@@ -4129,4 +4274,4 @@ function __dirnameSafe() {
+ }
+ 
+ //#endregion
+-export { AgentProcess, apply, configPaths, defaultAgentPath, ensureToken, fetchHealth, fetchModels, inject, name, providerBaseURL, registerProvider, resolveConfig, toPiAiModels, writeAgentConfig };
+\ No newline at end of file
++export { AgentProcess, apply, configPaths, defaultAgentPath, ensureToken, fetchHealth, fetchModels, inject, installRouteSwitch, name, normalizeRouteSwitchConfig, parseRouteRows, providerBaseURL, registerProvider, resolveConfig, settleRouteSwitch, toPiAiModels, writeAgentConfig };
+\ No newline at end of file
 diff --git a/lib/catalog-4gwZT9We.js b/lib/catalog-4gwZT9We.js
 index facd12b..1ae8ef7 100644
 --- a/lib/catalog-4gwZT9We.js
