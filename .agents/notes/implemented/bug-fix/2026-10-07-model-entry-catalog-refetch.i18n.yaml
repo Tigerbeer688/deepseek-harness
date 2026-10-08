@@ -1,0 +1,22 @@
+# Bilingual-pair consistency record for 2026-10-07-model-entry-catalog-refetch.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-10-07-model-entry-catalog-refetch.md
+/agent-note-refetch-the-model-catalog-when-a-model-entry-opens:
+  en: ad7dc8ba2ecb0cab
+  zh: c1c656f7b65d32bf
+/agent-note-refetch-the-model-catalog-when-a-model-entry-opens/problem:
+  en: ff1517150a6a6bb2
+  zh: 74445c5fb4dcc27b
+/agent-note-refetch-the-model-catalog-when-a-model-entry-opens/decision:
+  en: 2e3d0460b0e499d6
+  zh: 2e9629051954fc96
+/agent-note-refetch-the-model-catalog-when-a-model-entry-opens/alternatives-considered:
+  en: 68d32e8a58a60384
+  zh: 7264244dd24055b8
+/agent-note-refetch-the-model-catalog-when-a-model-entry-opens/consequences:
+  en: 080357456e3ebb99
+  zh: 1390a06a3bbb45b0
+/agent-note-refetch-the-model-catalog-when-a-model-entry-opens/testing:
+  en: ed6a83db7d7f3a24
+  zh: c7c76855cbd8b686

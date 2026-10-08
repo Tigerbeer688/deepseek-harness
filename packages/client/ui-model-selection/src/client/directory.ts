@@ -82,6 +82,24 @@ export class ModelDirectory {
   }
 
   /**
+   * Refetch the shared catalog from the Host regardless of its age, so an entry
+   * opened for a fresh model list shows one. A failed refetch keeps the last
+   * loaded groups with the error on the store; with nothing loaded yet, where
+   * there is no value to keep, it rejects.
+   * @returns the directory value once the refetch settles.
+   */
+  async reload(): Promise<ModelDirectoryState> {
+    this.assertAvailable()
+    try {
+      await this.catalog.reload()
+    } catch (error) {
+      if (this.catalog.store.getSnapshot().value === null) throw error
+    }
+    this.syncInputs()
+    return this.store.getSnapshot()
+  }
+
+  /**
    * Select the complete provider/model/reasoning selection. The durable
    * projection frame updates the shared current; failures surface on the store
    * and return with the operation so each entry can present its own failure.

@@ -343,11 +343,13 @@ describe('ui-model-selection dual entry', () => {
     expect(faceA.directory).not.toBe(faceB.directory)
     // The service face resolves the same instance the seat inject handed out.
     expect(b.ctx.modelDirectories.directoryFor(sid('a')).store).toBe(faceA.directory)
+    const warm = b.calls.models
     await Promise.all([
       b.popup().options(projection('a'), new AbortController().signal),
       b.popup().options(projection('b'), new AbortController().signal),
     ])
-    expect(b.calls.models).toBe(1)
+    // Both opens refetch, and they share the one request between them.
+    expect(b.calls.models - warm).toBe(1)
   })
 
   it('drops a pending selection on connection reset and ignores its late settlement', async () => {
@@ -433,6 +435,91 @@ describe('ui-model-selection dual entry', () => {
     }
   })
 
+  it('refetches the Host catalog when the popup opens, without a Host event', async () => {
+    const b = await bench()
+    try {
+      b.mint('s1')
+      const before = await b.popup().options(projection('s1'), new AbortController().signal)
+      expect(before.map((option: SelectOption) => option.group?.name)).toEqual([
+        'deepseek-official', 'deepseek-official', 'external',
+      ])
+
+      const warm = b.calls.models
+      b.setGroups([{ ...GROUPS[1]!, id: 'late-provider', name: 'Late Provider' }])
+      const after = await b.popup().options(projection('s1'), new AbortController().signal)
+      expect(b.calls.models).toBe(warm + 1)
+      expect(after.map((option: SelectOption) => option.group?.name)).toEqual(['late-provider'])
+    } finally {
+      await b.ctx.fiber.dispose()
+    }
+  })
+
+  it('refetches the Host catalog when the composer model menu opens, without a Host event', async () => {
+    const b = await bench()
+    try {
+      b.mint('s1')
+      const face = b.seat().inject!(sid('s1'))
+      await b.ctx.modelDirectories.directoryFor(sid('s1')).load()
+      const warm = b.calls.models
+
+      b.setGroups([{ ...GROUPS[1]!, id: 'late-provider', name: 'Late Provider' }])
+      face.load()
+      expect(b.calls.models).toBe(warm + 1)
+      await vi.waitFor(() => {
+        expect(face.directory.getSnapshot().groups.map(group => group.id)).toEqual(['late-provider'])
+      })
+    } finally {
+      await b.ctx.fiber.dispose()
+    }
+  })
+
+  it('keeps the loaded groups when an open-time refetch fails', async () => {
+    const b = await bench()
+    try {
+      b.mint('s1')
+      await b.ctx.modelDirectories.directoryFor(sid('s1')).load()
+      b.setCatalogFailure(true)
+
+      const options = await b.popup().options(projection('s1'), new AbortController().signal)
+      expect(options.map((option: SelectOption) => option.label)).toEqual([
+        'DeepSeek-V4-Flash', 'DeepSeek-V4-Pro', 'External Flash',
+      ])
+      expect(b.ctx.modelDirectories.directoryFor(sid('s1')).store.getSnapshot()).toMatchObject({
+        status: 'error', error: 'catalog offline',
+      })
+    } finally {
+      await b.ctx.fiber.dispose()
+    }
+  })
+
+  it('surfaces a failed open-time refetch when no catalog is loaded yet', async () => {
+    const b = await bench()
+    try {
+      b.mint('s1')
+      const face = b.seat().inject!(sid('s1'))
+      b.setCatalogFailure(true)
+      b.ctx.emit('connection/reset')
+      await vi.waitFor(() => {
+        expect(b.ctx.modelDirectories.directoryFor(sid('s1')).store.getSnapshot()).toMatchObject({
+          groups: [], status: 'error', error: 'catalog offline',
+        })
+      })
+
+      await expect(b.popup().options(
+        projection('s1'),
+        new AbortController().signal,
+      )).rejects.toThrow('catalog offline')
+
+      // The seat's own load keeps the failure on its store rather than throwing at the caller.
+      face.load()
+      await vi.waitFor(() => {
+        expect(face.directory.getSnapshot()).toMatchObject({ status: 'error', error: 'catalog offline' })
+      })
+    } finally {
+      await b.ctx.fiber.dispose()
+    }
+  })
+
   it('scope disposal drops the directory; a reborn scope gets a fresh one', async () => {
     const b = await bench()
     const first = b.mint('s1')
@@ -472,18 +559,19 @@ describe('ui-model-selection dual entry', () => {
     const face = b.seat().inject!(sid('s1'))
 
     expect(b.blockOf('s1')).toBeUndefined()
+    const warm = b.calls.models
     face.load()
     await Promise.resolve()
     await Promise.resolve()
     expect(b.blockOf('s1')).toBeUndefined()
-    expect(b.calls.models).toBe(1)
+    expect(b.calls.models).toBe(warm + 1)
 
     b.setRoutable(false)
     b.remote.emit('settings/document-updated', ['llm-deepseek', 1])
     await Promise.resolve()
     await Promise.resolve()
     expect(b.blockOf('s1')).toBeUndefined()
-    expect(b.calls.models).toBe(2)
+    expect(b.calls.models).toBe(warm + 2)
 
     // Recovering clears it without a reload of the surface.
     b.setRoutable(true)
@@ -491,7 +579,7 @@ describe('ui-model-selection dual entry', () => {
     await Promise.resolve()
     await Promise.resolve()
     expect(b.blockOf('s1')).toBeUndefined()
-    expect(b.calls.models).toBe(3)
+    expect(b.calls.models).toBe(warm + 3)
   })
 
   it('retains an unavailable durable selection without replacing or rewriting it', async () => {

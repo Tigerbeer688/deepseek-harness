@@ -4,6 +4,9 @@ import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type { ModelCatalog, ModelSelection, ModelProviderGroup } from '@deepseek-ai/dsh-api-remotes/client'
 import { createSnapshotStore, type SnapshotStore } from '@deepseek-ai/dsh-client-store'
 
+/** How long a loaded catalog counts as fresh; `load()` refetches a value this old. */
+const CATALOG_FRESH_MS = 300_000
+
 /** Observable lifecycle of the shared model catalog. */
 export interface ModelCatalogState {
   value: ModelCatalog | null
@@ -33,6 +36,7 @@ export class ModelCatalogDirectory {
 
   private generation = 0
   private inflight: Promise<ModelCatalog> | undefined
+  private loadedAt = 0
 
   /**
    * @param ctx - the providing plugin's context, whose `remote.session`
@@ -42,11 +46,14 @@ export class ModelCatalogDirectory {
 
   /**
    * Return the current generation's catalog, sharing its one in-flight load.
+   * A value older than the freshness horizon refetches instead of returning.
    * @returns the loaded global catalog.
    */
   load(): Promise<ModelCatalog> {
     const state = this.store.getSnapshot()
-    if (state.status === 'ready' && state.value !== null) return Promise.resolve(state.value)
+    if (state.status === 'ready' && state.value !== null && Date.now() - this.loadedAt < CATALOG_FRESH_MS) {
+      return Promise.resolve(state.value)
+    }
     if (this.inflight !== undefined) return this.inflight
     const generation = this.generation
     this.store.update((draft) => {
@@ -64,6 +71,7 @@ export class ModelCatalogDirectory {
           }
         }
         this.store.set({ value: response.value, status: 'ready', error: null })
+        this.loadedAt = Date.now()
       }
       return response.value
     }).catch((error: unknown) => {
@@ -82,7 +90,7 @@ export class ModelCatalogDirectory {
   }
 
   /**
-   * Invalidate the loaded catalog; the next explicit menu read reloads it.
+   * Drop the cached result so the next `load()` refetches from the Host.
    * @param clear - whether values from the previous Host generation must be hidden.
    */
   private invalidate(clear = false): void {
@@ -90,6 +98,17 @@ export class ModelCatalogDirectory {
     this.inflight = undefined
     const value = clear ? null : this.store.getSnapshot().value
     this.store.set({ value, status: 'idle', error: null })
+  }
+
+  /**
+   * Refetch the catalog from the Host, joining a load that is already running
+   * instead of starting a second one. Used when a user opens a model entry,
+   * where the freshly retrieved list matters more than the cached one.
+   * @returns the refreshed global catalog.
+   */
+  async reload(): Promise<ModelCatalog> {
+    if (this.inflight === undefined) this.invalidate()
+    return this.load()
   }
 
   /** Invalidate and reload the catalog after a Host-side model input changes. */

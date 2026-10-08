@@ -32,6 +32,46 @@ describe('ModelCatalogDirectory', () => {
     expect(models).toHaveBeenCalledTimes(2)
   })
 
+  it('serves a young catalog from the cache and refetches once it passes the freshness horizon', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    try {
+      vi.setSystemTime(1_000)
+      const models = vi.fn()
+        .mockResolvedValueOnce({ ok: true, value: catalog('first') })
+        .mockResolvedValueOnce({ ok: true, value: catalog('second') })
+      const subject = directory(models)
+
+      await expect(subject.load()).resolves.toEqual(catalog('first'))
+      vi.setSystemTime(1_000 + 299_000)
+      await expect(subject.load()).resolves.toEqual(catalog('first'))
+      vi.setSystemTime(1_000 + 300_000)
+      await expect(subject.load()).resolves.toEqual(catalog('second'))
+      expect(models).toHaveBeenCalledTimes(2)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('refetches on reload and joins a reload issued while that load is running', async () => {
+    const running = Promise.withResolvers<unknown>()
+    const models = vi.fn()
+      .mockResolvedValueOnce({ ok: true, value: catalog('warm') })
+      .mockReturnValueOnce(running.promise)
+      .mockResolvedValueOnce({ ok: true, value: catalog('fresh') })
+    const subject = directory(models)
+    await subject.load()
+    expect(models).toHaveBeenCalledTimes(1)
+
+    const reloaded = subject.reload()
+    const joined = subject.reload()
+    expect(models).toHaveBeenCalledTimes(2)
+    running.resolve({ ok: true, value: catalog('fresh') })
+    await expect(reloaded).resolves.toEqual(catalog('fresh'))
+    await expect(joined).resolves.toEqual(catalog('fresh'))
+    expect(models).toHaveBeenCalledTimes(2)
+    expect(subject.store.getSnapshot()).toMatchObject({ value: catalog('fresh'), status: 'ready' })
+  })
+
   it('does not publish a successful result from an invalidated generation', async () => {
     const first = Promise.withResolvers<unknown>()
     const second = Promise.withResolvers<unknown>()
