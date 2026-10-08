@@ -229,7 +229,7 @@ index cc0f6a0..5f8c400 100644
 +export { AgentProcess, apply, configPaths, defaultAgentPath, ensureToken, fetchHealth, fetchModels, inject, installRouteSwitch, name, normalizeRouteSwitchConfig, parseRouteRows, providerBaseURL, registerProvider, resolveConfig, settleRouteSwitch, toPiAiModels, writeAgentConfig };
 \ No newline at end of file
 diff --git a/lib/catalog-4gwZT9We.js b/lib/catalog-4gwZT9We.js
-index facd12b..1ae8ef7 100644
+index facd12b..971fff8 100644
 --- a/lib/catalog-4gwZT9We.js
 +++ b/lib/catalog-4gwZT9We.js
 @@ -316,9 +316,21 @@ var ModelCatalog = class {
@@ -257,7 +257,19 @@ index facd12b..1ae8ef7 100644
  			if (prices.size === 0) throw new Error("models.dev contains no OpenCode model metadata");
  			this.#prices = prices;
  			this.#pricesReady = true;
-@@ -396,14 +408,32 @@ async function withTimeout(promise, timeoutMs = FETCH_TIMEOUT_MS) {
+@@ -337,11 +349,6 @@ var ModelCatalog = class {
+ 	}
+ 	decision(model) {
+ 		const metadata = decide(model, this.#prices, this.#pricesReady);
+-		if (!metadata.allowed && metadata.source === "metadata_deprecated" && staticFreeModels.includes(model)) return {
+-			allowed: true,
+-			source: "static_verified",
+-			known: false
+-		};
+ 		if (!metadata.allowed && !metadata.known && staticFreeModels.includes(model)) return {
+ 			allowed: true,
+ 			source: "static_verified",
+@@ -396,14 +403,32 @@ async function withTimeout(promise, timeoutMs = FETCH_TIMEOUT_MS) {
  }
  /** S1: fetchModels (models.go:587-618) with the CLI disguise headers. */
  async function fetchZenModels(zenBaseUrl, fetchImpl, userAgent) {
