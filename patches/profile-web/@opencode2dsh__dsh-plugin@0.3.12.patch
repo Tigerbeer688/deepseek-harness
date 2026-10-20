@@ -1,0 +1,122 @@
+diff --git a/lib/admission-DaoH6D_f.js b/lib/admission-DaoH6D_f.js
+index 4cf4b5a..914622e 100644
+--- a/lib/admission-DaoH6D_f.js
++++ b/lib/admission-DaoH6D_f.js
+@@ -485,8 +485,7 @@ async function admitCandidate(deps, candidate, options = {}) {
+ 	const smokeModel = deps.smokeModel ?? "big-pickle";
+ 	const probeHeaders = disguiseHeaders({
+ 		session: canonicalSessionID(`admission:${candidate.address}`),
+-		request: randomID("req", 16),
+-		project: stableID("prj", "opencode2dsh:default-project"),
++		project: "global",
+ 		parentSession: ""
+ 	});
+ 	let agent = null;
+@@ -531,8 +530,7 @@ async function admitCandidate(deps, candidate, options = {}) {
+ 				"content-type": "application/json",
+ 				...disguiseHeaders({
+ 					session: canonicalSessionID("opencode2dsh:admission-smoke"),
+-					request: randomID("req", 16),
+-					project: stableID("prj", "opencode2dsh:admission"),
++					project: "global",
+ 					parentSession: ""
+ 				}),
+ 				...probeHeaders
+diff --git a/lib/catalog-DdufXPqf.js b/lib/catalog-DdufXPqf.js
+index f03ceb8..ac9ce91 100644
+--- a/lib/catalog-DdufXPqf.js
++++ b/lib/catalog-DdufXPqf.js
+@@ -32,8 +32,7 @@ function deriveRequestIDs(messages) {
+ 	if (signal === "" || signal === "{}") signal = randomID("fallback", 16);
+ 	return {
+ 		session: canonicalSessionID(signal),
+-		request: randomID("req", 16),
+-		project: stableID("prj", "opencode2dsh:default-project"),
++		project: "global",
+ 		parentSession: ""
+ 	};
+ }
+@@ -141,8 +140,7 @@ function disguiseHeaders(ids) {
+ 		"x-opencode-session": ids.session,
+ 		"x-session-affinity": ids.session,
+ 		"X-Session-Id": ids.session,
+-		"x-opencode-request": ids.request,
+-		"x-opencode-project": ids.project
++		"x-opencode-project": "global"
+ 	};
+ }
+ 
+@@ -158,7 +156,7 @@ function disguiseHeaders(ids) {
+ *
+ * /v1/models-equivalent exposure = S1 ∩ S2-allowed (or S3 while S1 is pending).
+ */
+-const ZEN_BASE_URL = "https://opencode.ai/zen";
++const ZEN_BASE_URL = "https://opencode.ai/inference";
+ /**
+ * Free-lane blocklist (issue #56 live matrix, 2026-10-10): models the live
+ * chat lane can never serve. The Zen catalog still lists them, so S1 alone
+diff --git a/lib/index.js b/lib/index.js
+index 8f54d44..a2c9682 100644
+--- a/lib/index.js
++++ b/lib/index.js
+@@ -399,6 +399,10 @@ function toPiModel(id, reasoning, limits, declaredModalities) {
+ 		provider: PROVIDER_ID,
+ 		baseUrl: `${ZEN_BASE_URL.replace(/\/+$/, "")}/v1`,
+ 		reasoning,
++		compat: {
++			maxTokensField: "max_tokens",
++			...(/deepseek/i.test(String(id)) ? { requiresReasoningContentOnAssistantMessages: true } : {})
++		},
+ 		input: isVisionModel(id, declaredModalities) ? ["text", "image"] : ["text"],
+ 		cost: {
+ 			input: 0,
+@@ -1235,7 +1239,7 @@ async function writeAgentConfig(paths, options) {
+ 		anonymous: true,
+ 		zen_keys: [],
+ 		go_keys: [],
+-		upstream: { zen: "https://opencode.ai/zen" },
++		upstream: { zen: "https://opencode.ai/inference" },
+ 		models: { refresh_seconds: options.refreshSeconds },
+ 		retry: {
+ 			max_attempts: 2,
+diff --git a/lib/messages-CLaBfusR.js b/lib/messages-CLaBfusR.js
+index 1e8c24f..9a40c41 100644
+--- a/lib/messages-CLaBfusR.js
++++ b/lib/messages-CLaBfusR.js
+@@ -262,7 +262,7 @@ async function toPiContext(options) {
+ * recipe stays the 2026-09-18 bash+read pair: minimal, host-named, and valid
+ * on both the /zen and /inference lanes.
+ */
+-const FREE_LANE_GATE_TOOL_NAMES = ["bash", "read"];
++const FREE_LANE_GATE_TOOL_NAMES = ["read"];
+ /**
+ * Inbound tool-call names rewritten before the chunk stream leaves the
+ * adapter (zen-adapter.ts hands this to toStreamChunks). Empty on the shipped
+@@ -276,10 +276,25 @@ function freeLaneGateTool(name) {
+ 		type: "function",
+ 		function: {
+ 			name,
+-			description: "Reserved for the host runtime; do not call it.",
++			description: "Reads a file from the filesystem. This is a gate tool required by the gateway; do not call it.",
+ 			parameters: {
+ 				type: "object",
+-				properties: {}
++				properties: {
++					path: {
++						type: "string",
++						description: "The path to the file to read."
++					},
++					offset: {
++						type: "number",
++						description: "The line number to start reading from (0-based)."
++					},
++					limit: {
++						type: "number",
++						description: "The maximum number of lines to read."
++					}
++				},
++				required: ["path"],
++				additionalProperties: false
+ 			}
+ 		}
+ 	};
