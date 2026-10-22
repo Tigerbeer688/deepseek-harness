@@ -87,6 +87,8 @@ kind: "package-reference"
 
 `per-record` 表文档位于 `<root>/<unit>/<table>/<key>.json`，形式为 `{ "version": 1, "record": <value> }`；可选的全局值使用 `<root>/<unit>/global.json`。格式版本来自领域规范。
 
+读取时容忍开头的 UTF-8 BOM——`JSON.parse` 自身会拒绝它；写出时从不产生 BOM。
+
 ### 源码地图
 
 | 文件 | 职责 |

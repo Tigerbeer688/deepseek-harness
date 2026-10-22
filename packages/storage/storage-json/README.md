@@ -87,6 +87,8 @@ A `single` document carries the unit identity, global singleton, and all tables:
 
 A `per-record` table document at `<root>/<unit>/<table>/<key>.json` has the form `{ "version": 1, "record": <value> }`; the optional global value uses `<root>/<unit>/global.json`. The format version comes from the domain specification.
 
+Reading tolerates a leading UTF-8 BOM, which `JSON.parse` rejects on its own; writing never emits one.
+
 ### Source map
 
 | File | Role |
