@@ -781,6 +781,31 @@ describe('pressure measurement and retention', () => {
     expect(compact.calls[0]!.input.messages.filter(message => message.role === 'system')).toHaveLength(1)
   })
 
+  it('starts the range after every leading system head, not only the first', () => {
+    const ctx = createContext()
+    const session = conversation(4, undefined, 'SYSTEM HEAD')
+    const [head, firstUser] = session.surface.nodes
+    expect(session.eventAt(head!)?.type).toBe('system/message')
+
+    // A restored generation can carry a second system/message on the surface:
+    // replacing a non-head node with one leaves the original head in place.
+    session.append('system/message', {
+      turn: 1,
+      step: 1,
+      message: createSystemMessage('SECOND HEAD'),
+    }, {
+      surfaceOp: { op: 'replace', startSeq: firstUser!, endSeq: firstUser! },
+      sourceEventSeqs: [firstUser!],
+    })
+
+    const [stillHead, secondHead] = session.surface.nodes
+    expect(stillHead).toBe(head)
+    expect(session.eventAt(secondHead!)?.type).toBe('system/message')
+
+    const range = selectCompactableRange(session, ctx.tokenMeter.measure(session), 0)
+    expect(range?.start).toBe(session.surface.nodes[2])
+  })
+
   it('declines when only the system head precedes the retained tail', () => {
     const ctx = createContext()
     const session = conversation(1, undefined, 'SYSTEM HEAD')
