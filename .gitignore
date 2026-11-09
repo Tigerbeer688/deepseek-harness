@@ -1,0 +1,18 @@
+# 备份与本地产物
+*.bak
+*.bak-*
+*.corrupt-*
+*.prev-*
+
+# 若有人把整个 ~/.dsh 拷进来，避免误提交
+sessions/
+node_modules/
+storages/
+logs/
+our-free-model/
+workbuddy-vault/
+
+# 凭据
+.env
+.env.*
+*.credentials*
