@@ -22,7 +22,7 @@
 
 - 运行版本：`0.2.0-rc.2`（源码启动，`apps/cli/lib/bin.js`）
 - 压缩目标：`codearts/deepseek-v4.1-flash-1017`（显式指定；不再跟随会话模型）
-- 保留策略：`retainTokens: 600000`（三处 preset 一致）
+- 保留策略：`thresholdRatio: 0.7` / `retainRatio: 0.15`（三处 preset 一致）
 - 工具结果剪枝：`thresholdChars: 2048` / `headChars: 1024` / `tailChars: 512`
 - 启动脚本：`--max-old-space-size=2048`，日志 `dsh-boot.log` 追加、超 10 MB 轮转为 `dsh-boot.prev.log`
 
