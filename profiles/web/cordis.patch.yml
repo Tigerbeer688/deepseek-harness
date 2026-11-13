@@ -1,4 +1,23 @@
 - insert:
+    - id: windows-mcp-bridge
+      name: "@deepseek-ai/dsh-mcp-client"
+      disabled: false
+      config:
+        serverName: windows
+        transport: stdio
+        command: 'C:\Users\Administrator\.local\bin\windows-mcp.exe'
+        args:
+          - serve
+          - --exclude-tools
+          - App,PowerShell,FileSystem
+        toolCallTimeoutMs: 120000
+        failOnStartupError: false
+        reconnect:
+          enabled: true
+          initialDelayMs: 500
+          maxDelayMs: 30000
+
+- insert:
     - id: fetch-shim
       name: "dsh-fetch-shim"
 - insert:
@@ -230,8 +249,9 @@
 - id: agent-default-model
   name: "@deepseek-ai/dsh-agent-default-model"
   config:
-    provider: codearts
-    model: deepseek-v4.1-flash
+    provider: workbuddy
+    model: glm-5.3-flash
+    reasoningEffort: high
 - id: agent-loop
   name: "@deepseek-ai/dsh-agent-loop"
   config:
@@ -2650,5 +2670,22 @@
           memberAccountIds:
             - 37ac697f96d15fd294a3cc9a
             - 957e7f566d65dabe94de41ac
+            - b5a2f81db9e7c82d4630d8a2
           orderAccountIds: []
           probeInputTokens: 0
+- id: dsh-context
+  name: dsh-context
+  config:
+    defaultOverviewRange: all
+- id: tool-pwsh
+  disabled: false
+- id: tool-fs
+  disabled: false
+- id: tool-fs-search
+  disabled: false
+- id: llm-xdpool
+  name: dsh-xdpool
+  config:
+    automationEarnings:
+      date: 2026-11-13
+      accounts: {}

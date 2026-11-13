@@ -25,9 +25,14 @@
     "dsh-find-plugin": "^0.4.0",
     "dsh-free-search": "^0.6.5",
     "dsh-gungnir": "^0.2.1",
+    "dsh-huawei-connect": "1.3.4",
+    "dsh-live-token-stats": "^0.4.7",
+    "dsh-llm-hub": "link:C:/Users/Administrator/.dsh/local-plugins/dsh-llm-hub",
     "dsh-plugin-mnemosyne": "github:xuviga/dsh-plugin-mnemosyne#739a819850cfcdf7df1b484b10188aa7084ceb32",
     "dsh-session-cleaner": "github:fountunt/dsh-session-cleaner#f12ef7bad873638721b5b9891700d2c5e4df22f7",
     "dsh-settings-scope-shim": "file:settings-scope-shim",
+    "dsh-windows-mcp": "0.2.8",
+    "dsh-xdpool": "^2.6.7",
     "dshmarket": "^1.66.45"
   },
   "dsh": {
@@ -40,7 +45,6 @@
         "dsh-gungnir",
         "@furongjun1999/dsh-memory",
         "@xmanrui/dsh-im",
-        "@deepseek-ai/dsh-experimental-voice-input-bundle",
         "dsh-artifact",
         "@deepseek-ai/dsh-experimental-agent-team-profile",
         "@deepseek-ai/dsh-tool-stat",
@@ -51,7 +55,10 @@
         "dsh-expert",
         "dsh-codearts",
         "dsh-connect-workbuddy",
-        "dsh-context"
+        "dsh-context",
+        "dsh-windows-mcp",
+        "dsh-llm-hub",
+        "dsh-huawei-connect"
       ],
       "patchReload": "live"
     }

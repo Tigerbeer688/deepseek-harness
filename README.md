@@ -21,10 +21,13 @@
 ## 本机当前关键配置（以便判断这份快照代表什么状态）
 
 - 运行版本：`0.2.0-rc.2`（源码启动，`apps/cli/lib/bin.js`）
+- 默认模型：`officeace/deepseek-v4.1-flash`（2026-11-13 由 `codearts` 切换；压缩目标仍是码道）
 - 压缩目标：`codearts/deepseek-v4.1-flash-1017`（显式指定；不再跟随会话模型）
 - 保留策略：`thresholdRatio: 0.7` / `retainRatio: 0.15`（三处 preset 一致）
 - 工具结果剪枝：`thresholdChars: 2048` / `headChars: 1024` / `tailChars: 512`
 - 启动脚本：`--max-old-space-size=2048`，日志 `dsh-boot.log` 追加、超 10 MB 轮转为 `dsh-boot.prev.log`
+- 官方工具行：`tool-pwsh` / `tool-fs` / `tool-fs-search` 显式启用，替代已卸载的第三方 `dsh-ops`
+- 新增接入：`dsh-huawei-connect`（码道 / 果办）、`dsh-xdpool`（WorkBuddy 账号池与免费额度渠道）、`dsh-windows-mcp`（MCP stdio 桥）、`dsh-llm-hub`（本机 link）
 
 ## 恢复到一台新机器
 
