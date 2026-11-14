@@ -816,7 +816,10 @@ function throwWithoutCjsAnchor(error: unknown, anchor: string): never {
     resolved.requireStack = remaining
     const stack = error.stack
     /* v8 ignore next -- Node's resolver errors always carry a stack */
-    if (stack !== undefined) error.stack = stack.replace(originalMessage, error.message)
+    if (stack !== undefined) {
+      const replaced = stack.replace(originalMessage, error.message)
+      if (!Reflect.set(error, 'stack', replaced)) Object.defineProperty(error, 'stack', { value: replaced })
+    }
   }
   throw error
 }
