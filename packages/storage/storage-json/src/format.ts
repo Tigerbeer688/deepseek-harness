@@ -19,6 +19,11 @@ export interface UnitState {
   tables: Map<string, Map<string, unknown>>
 }
 
+/** Strip a UTF-8 BOM that `readFile(..., 'utf8')` preserves; `JSON.parse` rejects it. */
+function stripBom(text: string): string {
+  return text.charCodeAt(0) === 0xFEFF ? text.slice(1) : text
+}
+
 /**
  * Serialize a unit state to file content.
  * @param name - Unit name, stamped into the header.
@@ -47,7 +52,7 @@ export function serialize(name: string, state: UnitState): string {
 export function parse(text: string, descriptor: KvUnitDescriptor): UnitState {
   let document: unknown
   try {
-    document = JSON.parse(text)
+    document = JSON.parse(stripBom(text))
   } catch (error) {
     throw new StorageError('malformed-medium', `unit '${descriptor.name}': file is not valid JSON`, { cause: error })
   }
@@ -117,7 +122,7 @@ export function serializeRecord(version: number, value: unknown): string {
 export function parseRecord(text: string, versions: readonly number[]): unknown {
   let document: unknown
   try {
-    document = JSON.parse(text)
+    document = JSON.parse(stripBom(text))
   } catch {
     return undefined
   }

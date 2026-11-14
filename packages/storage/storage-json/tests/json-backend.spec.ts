@@ -220,6 +220,19 @@ describe('json backend specifics', () => {
     await backend.close()
   })
 
+  it('opens a whole-unit document whose content carries a UTF-8 BOM', async () => {
+    const root = await freshRoot()
+    await writeFile(
+      join(root, 'shape.json'),
+      `\uFEFF${JSON.stringify({ unit: { name: 'shape', version: 1 }, global: { g: 1 }, tables: { t: { k: { hello: 'world' } } } }, null, 2)}\n`,
+      'utf8',
+    )
+    const backend = new JsonStorageBackend(root)
+    const unit = await backend.kv.open(descriptor)
+    expect(await unit.loadAll()).toEqual({ tables: { t: { k: { hello: 'world' } } }, global: { g: 1 } })
+    await backend.close()
+  })
+
   it('registers on the hub via apply and closes on dispose', async () => {
     const root = await freshRoot()
     const ctx = new Context()
@@ -322,6 +335,16 @@ describe('per-record layout', () => {
     await rm(blocked, { recursive: true })
     // An unsafe key rejects before any document is renamed.
     await expect(unit.deleteRecords('t', ['ok', 'a/b'])).rejects.toThrow(/not path-safe/)
+    await backend.close()
+  })
+
+  it('reads a record document whose content carries a UTF-8 BOM', async () => {
+    const root = await freshRoot()
+    await mkdir(join(root, 'recs', 't'), { recursive: true })
+    await writeFile(recordPath(root, 'k'), `\uFEFF${JSON.stringify({ version: 2, record: { v: 1 } }, null, 2)}\n`, 'utf8')
+    const backend = new JsonStorageBackend(root)
+    const unit = await backend.kv.open(descriptor)
+    expect(await unit.loadAll()).toEqual({ tables: { t: { k: { v: 1 } } }, global: null })
     await backend.close()
   })
 
