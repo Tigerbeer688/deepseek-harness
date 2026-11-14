@@ -127,8 +127,17 @@ export function selectCompactableRange(
     || surfaceNodes.some((seq, index) => seq !== pricedNodes[index]?.seq)) {
     throw new Error('compaction: token-meter surface does not match the current session surface')
   }
-  // oxlint-disable-next-line typescript/no-non-null-assertion
-  const firstIdx = systemHead(session, surfaceNodes[0]!) === undefined ? 0 : 1
+  // A `system/message` is never inside the range. One normally sits at node 0,
+  // but a restored generation can leave more than one on the surface, and the
+  // format validator protects whichever one is the current head, so skip every
+  // leading system node instead of only node 0.
+  let firstIdx = 0
+  for (;;) {
+    if (firstIdx >= pricedNodes.length) break
+    // oxlint-disable-next-line typescript/no-non-null-assertion
+    if (systemHead(session, surfaceNodes[firstIdx]!) === undefined) break
+    firstIdx += 1
+  }
 
   let accumulated = 0
   let keepFromIdx = pricedNodes.length
